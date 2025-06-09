@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  legal_rag:
+    build: .
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - YANDEX_API_KEY=${YANDEX_API_KEY}
+      - YANDEX_FOLDER_ID=${YANDEX_FOLDER_ID}
+      # Uncomment below for OpenAI fallback
+      # - OPENAI_API_KEY=${OPENAI_API_KEY}
+    restart: unless-stopped
