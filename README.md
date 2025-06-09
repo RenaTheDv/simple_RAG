@@ -27,6 +27,7 @@ LegalRAG — это интеллектуальный чат-бот для юри
    YANDEX_API_KEY=your_yandex_api_key_here
    YANDEX_FOLDER_ID=your_folder_id_here
    OPENAI_API_KEY=your_openai_key_here (если есть GPT API)
+   
    В будущем есть вариант реализовать .env и хранить его только локально, но в данном случае для примера был создан .env.example. Если изменить - поменяйте пути в каждом файле, который на него ссылается.
 
 4. **Подготовить данные**  
