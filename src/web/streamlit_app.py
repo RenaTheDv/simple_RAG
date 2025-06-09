@@ -1,10 +1,14 @@
 # Простенький web-интерфейс для теста работоспособности на streamlit
 
 import os
+import sys
 import streamlit as st
 from pathlib import Path
-from src.app import LegalRAG
 from dotenv import load_dotenv
+import traceback
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+from src.app import LegalRAG
 
 # Load environment variables from .env.example in project root
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[2] / '.env.example')
@@ -68,6 +72,8 @@ if st.button("Получить ответ", type="primary"):
                 st.markdown(answer)
             except Exception as e:
                 st.error(f"Произошла ошибка: {str(e)}")
+                st.text("Подробности ошибки:")
+                st.text(traceback.format_exc())
     else:
         st.warning("Пожалуйста, введите ваш вопрос.")
 

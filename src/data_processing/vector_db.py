@@ -21,18 +21,13 @@ class VectorDB:
     def __init__(self):
         """Initialize the vector database using environment variables."""
         project_root = Path(__file__).resolve().parents[2]  # подняться на 2 уровня выше от этого файла
-
-        print(f"Loading env from: {Path(__file__).resolve().parents[2] / '.env.example'}")
-        print("DATA_DIR =", os.getenv('DATA_DIR'))
-        print("PROCESSED_DATA_DIR =", os.getenv('PROCESSED_DATA_DIR'))
-        print("VECTOR_DB_DIR =", os.getenv('VECTOR_DB_DIR'))
-
         
         data_dir = os.getenv('DATA_DIR', 'data')
         self.data_root = (project_root / data_dir).resolve()
 
         self.processed_dir = self.data_root / os.getenv('PROCESSED_DATA_DIR', 'processed')
-        self.vector_db_dir = self.data_root / os.getenv('VECTOR_DB_DIR', 'vector_db')
+        vector_db_dir = os.getenv('VECTOR_DB_DIR', 'data/vector_db')
+        self.vector_db_dir = (project_root / vector_db_dir).resolve()
         self.vector_db_dir.mkdir(parents=True, exist_ok=True)
         
         # Initialize the embedding model
@@ -85,8 +80,12 @@ class VectorDB:
                 "тип_акта": doc.get("тип_акта", None),
                 "section": "фабула",
                 "chunk_index": i,
-                "статьи": doc.get("статьи", [])
+                "статьи": doc.get("статьи", []),
+                "номер_дела": doc.get("номер_дела", "неизвестен"),
+                "дата": doc.get("дата", "неизвестна"),
+                "фабула": chunk  # если хочешь сразу текст чанка хранить
             })
+
 
         # Разбиваем решение на чанки
         decision_chunks = self.chunk_text(doc.get("решение", ""))

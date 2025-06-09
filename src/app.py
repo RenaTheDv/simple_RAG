@@ -7,6 +7,11 @@ import requests
 from src.data_processing.vector_db import VectorDB
 from dotenv import load_dotenv
 
+import logging
+
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s:%(message)s')
+logger = logging.getLogger(__name__)
+
 # Load environment variables from .env.example in project root
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / '.env.example')
 
@@ -28,17 +33,33 @@ class LegalRAG:
             raise ValueError("YandexGPT API credentials not found in environment variables")
             
         # Get other settings from environment
-        self.top_k = int(os.getenv('TOP_K_RESULTS', '5'))
+        self.top_k = int(os.getenv('TOP_K_RESULTS', '3'))
         
     def format_prompt(self, query: str, relevant_chunks: List[Dict[str, Any]]) -> str:
         """Format the prompt for the LLM."""
         context = []
         for chunk in relevant_chunks:
-            section_text = "фабула" if chunk["section"] == "fabula" else "решение"
-            context.append(f"Из дела №{chunk['case_number']} от {chunk['date']}:")
+            # Определи раздел
+            if chunk.get("фабула"):
+                section_text = "фабула"
+                section_content = chunk["фабула"]
+            else:
+                section_text = "решение"
+                section_content = chunk.get("решение", "")
+            
+            case_number = chunk.get("номер_дела", "неизвестен")  # если такого нет, поставить заглушку
+            date = chunk.get("дата", "неизвестна")              # если нет — тоже заглушка
+            
+            context.append(f"Из дела №{case_number} от {date}:")
             context.append(f"[{section_text}]")
-            context.append(chunk.get("text", ""))  # Add chunk text if available
-            context.append("Упомянутые статьи: " + ", ".join(chunk["articles"]))
+            context.append(section_content)
+            
+            articles = chunk.get("статьи", [])
+            if articles:
+                context.append("Упомянутые статьи: " + ", ".join(articles))
+            else:
+                context.append("Упомянутые статьи: отсутствуют")
+            
             context.append("---")
         
         prompt = f"""Ты - опытный юрист, специализирующийся на российском праве. Используй предоставленные фрагменты судебных решений, чтобы ответить на вопрос пользователя.
@@ -57,7 +78,8 @@ class LegalRAG:
         url = "https://llm.api.cloud.yandex.net/foundationModels/v1/completion"
         headers = {
             "Authorization": f"Api-Key {self.yandex_api_key}",
-            "x-folder-id": self.yandex_folder_id
+            "x-folder-id": self.yandex_folder_id,
+            "Content-Type": "application/json"
         }
         data = {
             "modelUri": f"gpt://{self.yandex_folder_id}/yandexgpt-lite",
@@ -114,8 +136,11 @@ class LegalRAG:
         articles = set()
         
         for chunk in relevant_chunks:
-            sources.add(f"Решение суда №{chunk['case_number']} от {chunk['date']}")
-            articles.update(chunk["articles"])
+            logger.debug(f"chunk['статьи']: {chunk.get('статьи', [])}")
+            case_number = chunk.get("номер_дела", "неизвестен")
+            date = chunk.get("дата", "неизвестна")
+            sources.add(f"Решение суда №{case_number} от {date}")
+            articles.update(chunk.get("статьи", []))
         
         # Format output
         output = [
@@ -126,8 +151,9 @@ class LegalRAG:
         for source in sorted(sources):
             output.append(f"- {source}")
             
-        for article in sorted(articles):
-            output.append(f"- {article}")
+        if articles:
+            articles_str = ", ".join(sorted(articles))
+            output.append(f"Использованные статьи: {articles_str}")
             
         return "\n".join(output)
     
